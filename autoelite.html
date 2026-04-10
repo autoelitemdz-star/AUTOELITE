@@ -233,6 +233,7 @@ tr:hover td{background:#f5f5f0;cursor:pointer}
   <div class="pbody">
     <div class="pstats" id="pstats"></div>
     <div class="psearch"><input type="text" id="pbuscar" placeholder="Buscar por patente..." oninput="renderPortal()"></div>
+    <div style="font-size:11px;color:#888;margin-bottom:.75rem;padding:7px 12px;background:#fff;border:1px solid #e0dfd8;border-radius:8px;display:flex;align-items:center;gap:6px">📊 <span>Ordenadas por <strong>proximidad de entrega</strong> — la más cerca de estar lista aparece primero.</span></div>
     <div id="pcards"><div class="pempty">Cargando...</div></div>
   </div>
 </div>
@@ -499,7 +500,17 @@ function renderPortal(){
     '<div class="pstat"><div class="pstat-v" style="color:#3B6D11">'+lst+'</div><div class="pstat-l">Listas</div></div>'+
     '<div class="pstat"><div class="pstat-v" style="color:#888">'+ent+'</div><div class="pstat-l">Entregadas</div></div>';
   if(!fil.length){document.getElementById('pcards').innerHTML='<div class="pempty">Sin resultados</div>';return;}
+  /* Ordenar por proximidad a entrega: mayor progreso primero, luego prioridad Alta > Media > Baja */
+  var priOrd={Alta:0,Media:1,Baja:2};
+  fil=fil.slice().sort(function(a,b){
+    var pa=PROG[a.est]||0,pb=PROG[b.est]||0;
+    if(pb!==pa)return pb-pa;
+    return (priOrd[a.pri]||1)-(priOrd[b.pri]||1);
+  });
+  var posicion=0;
   document.getElementById('pcards').innerHTML=fil.map(function(u){
+    var esFinalizada=u.est==='entregado';
+    var numFila=esFinalizada?null:(++posicion);
     var pr=pObj(u.est),prog=PROG[u.est]||0,ci=PROCS.findIndex(function(p){return p.id===u.est;}),plan=u.plan||{};
     var tl=PROCS.map(function(p,i){
       var done=i<ci,act=i===ci,last=i===PROCS.length-1,fecha=(plan[p.id]&&(plan[p.id].fin||plan[p.id].inicio))||'';
@@ -528,8 +539,16 @@ function renderPortal(){
           (msgs[r.estado]?'<div class="prep-msg" style="background:'+msgC[r.estado]+'">'+msgs[r.estado]+'</div>':'')+
         '</div>';
       }).join('')+'</div>':'';
-    return '<div class="pcard">'+
-      '<div class="pcard-top"><div><div class="ppat">'+u.pat+'</div>'+(u.cli?'<div style="font-size:12px;color:#888;margin-top:2px">'+esc(u.cli)+'</div>':'')+
+    /* Badge de posición en fila */
+    var filaBadge='';
+    if(!esFinalizada){
+      var filaColor=numFila===1?'#3B6D11':numFila<=3?'#185FA5':'#666';
+      var filaBg=numFila===1?'#EAF3DE':numFila<=3?'#E6F1FB':'#eeeee8';
+      var filaLabel=numFila===1?'🥇 Próxima a entregar':'#'+numFila+' en fila';
+      filaBadge='<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:'+filaBg+';color:'+filaColor+';white-space:nowrap">'+filaLabel+'</span>';
+    }
+    return '<div class="pcard"'+(!esFinalizada&&numFila===1?' style="border:2px solid #3B6D11"':'')+'>'+
+      '<div class="pcard-top"><div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div class="ppat">'+u.pat+'</div>'+filaBadge+'</div>'+(u.cli?'<div style="font-size:12px;color:#888;margin-top:2px">'+esc(u.cli)+'</div>':'')+
       '</div><span class="pest" style="background:'+pr.b+';color:'+pr.c+'">'+pr.i+' '+pr.l+'</span></div>'+
       '<div class="pprog"><div class="pprogf" style="width:'+prog+'%;background:'+pr.c+'"></div></div>'+
       '<div class="ptl">'+tl+'</div>'+
