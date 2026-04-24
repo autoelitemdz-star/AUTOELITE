@@ -309,7 +309,8 @@ tr:hover td{background:#f5f5f0;cursor:pointer}
     <div class="nav-right">
       <div class="sdot" id="sdot" style="background:#EF9F27;animation:pulse 1s infinite"></div>
       <span class="slbl" id="slbl">Conectando...</span>
-      <button class="bell" onclick="toggleNotif()">🔔<span class="abadge" id="notifBadge">0</span></button>
+      <button class="bell" onclick="toggleA()" title="Alertas de producción">🚨<span class="abadge" id="abadge">0</span></button>
+      <button class="bell" onclick="toggleNotif()" title="Notificaciones">🔔<span class="abadge" id="notifBadge">0</span></button>
       <button class="bell" onclick="toggleChat()">💬</button>
       <button class="bell" onclick="abrirConfig()">⚙️</button>
       <button class="btn btn-sm" onclick="doLogout()">Salir</button>
@@ -345,9 +346,9 @@ tr:hover td{background:#f5f5f0;cursor:pointer}
     <div class="hdr"><h2>🎯 Monitor de Prioridades</h2>
       <select id="monFiltro" onchange="renderMonitor()" style="padding:5px 10px;border:1px solid #d0cfc8;border-radius:8px;font-size:12px;background:#eeeee8;color:#1a1a18">
         <option value="">Todas las prioridades</option>
-        <option value="alta">🔴 Alta</option>
-        <option value="media">🟠 Media</option>
-        <option value="baja">🟢 Baja</option>
+        <option value="Alta">🔴 Alta</option>
+        <option value="Media">🟠 Media</option>
+        <option value="Baja">🟢 Baja</option>
       </select>
     </div>
     <div id="monitorContent" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px"></div>
@@ -468,9 +469,18 @@ tr:hover td{background:#f5f5f0;cursor:pointer}
   <div class="modal" id="modal-cliente" style="display:none">
     <h2 id="mc-title">Nuevo Cliente</h2>
     <div class="field"><label>Nombre</label><input id="mcNom" placeholder="Nombre completo del cliente"></div>
-    <div class="field"><label>Email</label><input id="mcEmail" placeholder="email@example.com" type="email"></div>
+    <div class="field"><label>Email (será su usuario de acceso)</label><input id="mcEmail" placeholder="email@example.com" type="email"></div>
     <div class="field"><label>Teléfono</label><input id="mcTel" placeholder="+54 9 261..."></div>
-    <div class="field"><label>Empresa / Taller</label><input id="mcEmp" placeholder="Nombre de la empresa"></div>
+    <div class="field"><label>Empresa asignada</label>
+      <select id="mcEmp">
+        <option value="">— Sin empresa —</option>
+        <option value="olca">OLCA</option>
+        <option value="mediterraneo">Mediterráneo</option>
+        <option value="mediterraneorp">Mediterráneo R.P.</option>
+        <option value="particular">Particular</option>
+        <option value="fedepat">Fedepat</option>
+      </select>
+    </div>
     <div id="mcErr"></div>
     <div class="modal-acts">
       <button class="btn" onclick="cerrarModalCliente()">Cancelar</button>
@@ -508,15 +518,22 @@ var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ
 var BK='documentos';
 
 var USERS={
-  'admin':       {pass:'admin2024',  emp:null,          nom:'Administrador',admin:true},
-  'olca':        {pass:'olca2024',   emp:'olca',        nom:'OLCA'},
-  'mediterraneo':{pass:'med2024',    emp:'mediterraneo',nom:'Mediterráneo'},
-  'particular':  {pass:'part2024',   emp:'particular',  nom:'Particular'},
-  'fedepat':     {pass:'fed2024',    emp:'fedepat',     nom:'Fedepat'}
+  'admin':         {pass:'admin2024',emp:null,             nom:'Administrador',admin:true},
+  'olca':          {pass:'olca2024', emp:'olca',           nom:'OLCA'},
+  'mediterraneo':  {pass:'med2024',  emp:'mediterraneo',   nom:'Mediterráneo'},
+  'mediterraneorp':{pass:'medrp2024',emp:'mediterraneorp', nom:'Mediterráneo R.P.'},
+  'particular':    {pass:'part2024', emp:'particular',     nom:'Particular'},
+  'fedepat':       {pass:'fed2024',  emp:'fedepat',        nom:'Fedepat'}
 };
+/* Usuarios dinámicos (creados desde Clientes → Compartir credenciales) */
+try{
+  var _extraUsers=JSON.parse(localStorage.getItem('ae_extra_users')||'{}');
+  Object.keys(_extraUsers).forEach(function(k){USERS[k]=_extraUsers[k];});
+}catch(e){}
 var EMPS=[
   {id:'olca',n:'OLCA',c:'#185FA5'},
   {id:'mediterraneo',n:'Mediterráneo',c:'#0F6E56'},
+  {id:'mediterraneorp',n:'Mediterráneo R.P.',c:'#2BA085'},
   {id:'particular',n:'Particular',c:'#854F0B'},
   {id:'fedepat',n:'Fedepat',c:'#993C1D'}
 ];
@@ -593,6 +610,7 @@ function l2db(u){return{id:u.id,patente:u.pat,empresa:u.emp,oi:u.oi,monto:u.mont
 /* AUDIO */
 function getAC(){if(!aCtx)aCtx=new(window.AudioContext||window.webkitAudioContext)();return aCtx;}
 function sonar(t){
+  if(localStorage.getItem('ae_notifSound')==='false')return;
   try{var c=getAC();
     if(t==='u'){[0,.18,.36].forEach(function(s){var o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=880;o.type='sine';g.gain.setValueAtTime(0,c.currentTime+s);g.gain.linearRampToValueAtTime(.4,c.currentTime+s+.02);g.gain.linearRampToValueAtTime(0,c.currentTime+s+.12);o.start(c.currentTime+s);o.stop(c.currentTime+s+.13);});}
     else if(t==='a'){[0,.25].forEach(function(s,i){var o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=i?550:660;o.type='sine';g.gain.setValueAtTime(0,c.currentTime+s);g.gain.linearRampToValueAtTime(.3,c.currentTime+s+.03);g.gain.linearRampToValueAtTime(0,c.currentTime+s+.18);o.start(c.currentTime+s);o.stop(c.currentTime+s+.2);});}
@@ -1101,14 +1119,18 @@ function renderMonitor(){
   var filtro=document.getElementById('monFiltro').value;
   var em={};EMPS.forEach(function(e){em[e.id]=e.n;});
   var fil=DB.filter(function(u){if(filtro&&u.pri!==filtro)return false;return u.pri&&u.est!=='entregado';});
-  fil.sort(function(a,b){var o={'alta':0,'media':1,'baja':2};return(o[a.pri]||3)-(o[b.pri]||3);});
-  
+  /* Orden por prioridad Alta > Media > Baja (DB usa capitalizado) */
+  var orden={Alta:0,Media:1,Baja:2};
+  fil.sort(function(a,b){return (orden[a.pri]==null?3:orden[a.pri])-(orden[b.pri]==null?3:orden[b.pri]);});
+
   if(!fil.length){document.getElementById('monitorContent').innerHTML='<div class="empty" style="padding:3rem;grid-column:1/-1">No hay unidades con prioridades asignadas</div>';return;}
-  
+
   var html='';
   fil.forEach(function(u){
     var proc=pObj(u.est)||{i:'?',l:'?'};
-    html+='<div class="monitor-card '+u.pri+'"><div class="monitor-pat">'+u.pat+'</div><div class="monitor-emp">'+em[u.emp]+'</div><div class="monitor-info"><strong>OI:</strong> '+u.oi+'<br/><strong>Cliente:</strong> '+(u.cli||'-')+'<br/><strong>Estado:</strong> '+proc.l+'<br/><strong>Monto:</strong> $'+(u.monto?Number(u.monto).toLocaleString('es-AR'):'0')+'</div><div class="monitor-pri '+u.pri+'">🎯 Prioridad: '+u.pri.toUpperCase()+'</div></div>';
+    /* clase CSS en minúsculas (el CSS usa .monitor-card.alta, .media, .baja) */
+    var priCls=(u.pri||'').toLowerCase();
+    html+='<div class="monitor-card '+priCls+'"><div class="monitor-pat">'+u.pat+'</div><div class="monitor-emp">'+(em[u.emp]||u.emp||'-')+'</div><div class="monitor-info"><strong>OI:</strong> '+(u.oi||'-')+'<br/><strong>Cliente:</strong> '+(u.cli||'-')+'<br/><strong>Estado:</strong> '+proc.i+' '+proc.l+'<br/><strong>Monto:</strong> $'+(u.monto?Number(u.monto).toLocaleString('es-AR'):'0')+'</div><div class="monitor-pri '+priCls+'">🎯 Prioridad: '+u.pri.toUpperCase()+'</div></div>';
   });
   document.getElementById('monitorContent').innerHTML=html;
 }
@@ -1183,15 +1205,28 @@ function cerrarModalCliente(){document.getElementById('modal-cliente').style.dis
 function compartirCredenciales(id){
   var c=CLIENTES.find(function(x){return x.id===id;});
   if(!c)return;
-  var user=c.email;
-  var pass='Auto'+Math.random().toString(36).substr(2,8);
+  /* Generamos un username limpio a partir del email */
+  var user=(c.email||'').toLowerCase().trim().split('@')[0].replace(/[^a-z0-9]/g,'');
+  if(!user){toast('Error','El cliente debe tener email para generar usuario','u');return;}
+  /* Si ya existe una contraseña guardada para este cliente, la reutilizamos; sino generamos una nueva */
+  var extra={};
+  try{extra=JSON.parse(localStorage.getItem('ae_extra_users')||'{}');}catch(e){}
+  var pass;
+  if(extra[user]&&extra[user].pass){pass=extra[user].pass;}
+  else{pass='Auto'+Math.random().toString(36).substr(2,8);}
+  /* Guardamos el usuario en USERS (en memoria) y en localStorage (persistente) */
+  var nuevoUser={pass:pass,emp:c.emp||null,nom:c.nom,cliente:true};
+  USERS[user]=nuevoUser;
+  extra[user]=nuevoUser;
+  localStorage.setItem('ae_extra_users',JSON.stringify(extra));
   var url=window.location.href.split('?')[0];
   shareData={user:user,pass:pass,url:url,clientNom:c.nom};
   document.getElementById('shareUser').textContent=user;
   document.getElementById('sharePass').textContent=pass;
   document.getElementById('shareUrl').textContent=url;
   document.getElementById('modal-share').style.display='block';
-  agregarNotificacion('🆕 Cliente','Nuevo acceso compartido con '+c.nom,'ok');
+  agregarNotificacion('🆕 Acceso creado','Usuario de portal listo para '+c.nom,'ok');
+  toast('✅ Usuario creado','Puede ingresar con: '+user,'ok');
 }
 
 function cerrarModalShare(){document.getElementById('modal-share').style.display='none';}
@@ -1378,18 +1413,6 @@ function abrirRecuperacion(){
     toast('📧 Email enviado','Revisa tu correo para recuperar contraseña','ok');
     agregarNotificacion('🔄 Recuperación','Email de recuperación enviado','ok');
   }
-}
-
-function sonar(t){
-  if(localStorage.getItem('ae_notifSound')===false)return;
-  try{
-    var ctx=new(window.AudioContext||window.webkitAudioContext)();
-    var o=ctx.createOscillator(),g=ctx.createGain();
-    o.connect(g);g.connect(ctx.destination);
-    o.frequency.value=t==='u'?300:600;g.gain.setValueAtTime(.3,ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(.01,ctx.currentTime+.5);
-    o.start(ctx.currentTime);o.stop(ctx.currentTime+.5);
-  }catch(e){}
 }
 
 /* CSV */
