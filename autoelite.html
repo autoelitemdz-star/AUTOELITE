@@ -488,7 +488,7 @@ tr:hover td{background:#f5f5f0;cursor:pointer}
     <div class="share-box">
       <div style="font-size:12px;margin-bottom:10px;color:#1a1a18"><strong>El cliente entra directamente, sin usuario ni contraseña:</strong></div>
       <div class="share-cred">
-        <strong>URL:</strong> <span id="shareUrl"></span>
+        <strong>URL:</strong> <a id="shareUrl" href="#" target="_blank" rel="noopener" style="color:#185FA5"></a>
       </div>
       <button class="share-btn" onclick="copiarAlPortapapeles()">📋 Copiar enlace</button>
       <button class="share-btn" onclick="compartirWhatsApp()" style="background:#25D366;margin-top:4px">📱 Compartir por WhatsApp</button>
@@ -1222,9 +1222,10 @@ async function compartirAcceso(id){
     await sbPatch('unidades','id=eq.'+encodeURIComponent(u.id),{portal_token:token});
   }catch(e){toast('Error','No se pudo generar el enlace','u');return;}
   u.token=token;c.token=token;localStorage.setItem('ae_clientes',JSON.stringify(CLIENTES));
-  var url=window.location.origin+window.location.pathname+'?v=20260810-2&acceso='+encodeURIComponent(token);
+  var url=window.location.origin+window.location.pathname+'?v=20260810-3&acceso='+encodeURIComponent(token);
   shareData={url:url,clientNom:c.nom,patente:u.pat,email:c.email||''};
   document.getElementById('shareUrl').textContent=url;
+  document.getElementById('shareUrl').href=url;
   document.getElementById('modal-unidad').style.display='none';
   document.getElementById('modal-cliente').style.display='none';
   document.getElementById('modal-share').style.display='block';
@@ -1237,19 +1238,18 @@ async function compartirAcceso(id){
 function cerrarModalShare(){document.getElementById('modal-share').style.display='none';document.getElementById('overlay').style.display='none';}
 
 function copiarAlPortapapeles(){
-  var texto='Hola '+shareData.clientNom+', podés seguir el estado de tu vehículo '+shareData.patente+' desde este enlace:\n'+shareData.url;
-  navigator.clipboard.writeText(texto).then(function(){toast('✅ Copiado','Enlace copiado al portapapeles','ok');});
+  navigator.clipboard.writeText(shareData.url).then(function(){toast('✅ Copiado','Enlace copiado al portapapeles','ok');});
 }
 
 function compartirWhatsApp(){
-  var texto='Hola '+shareData.clientNom+', podés seguir el estado de tu vehículo '+shareData.patente+' desde este enlace:%0A'+encodeURIComponent(shareData.url);
-  window.open('https://wa.me/?text='+texto,'_blank');
+  var texto='Hola '+shareData.clientNom+', podés seguir el estado de tu vehículo '+shareData.patente+' desde este enlace:\n'+shareData.url;
+  window.open('https://wa.me/?text='+encodeURIComponent(texto),'_blank');
 }
 
 function compartirEmail(){
   var asunto='Seguimiento de tu vehículo - AutoElite';
-  var body='Hola '+shareData.clientNom+',%0A%0aPodés seguir el estado de tu vehículo '+shareData.patente+' sin contraseña desde este enlace:%0A'+encodeURIComponent(shareData.url)+'%0A%0aSaludos!';
-  window.open('mailto:'+shareData.email+'?subject='+encodeURIComponent(asunto)+'&body='+body);
+  var body='Hola '+shareData.clientNom+',\n\nPodés seguir el estado de tu vehículo '+shareData.patente+' sin contraseña desde este enlace:\n'+shareData.url+'\n\nSaludos!';
+  window.open('mailto:'+shareData.email+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(body));
 }
 
 /* NOTIFICACIONES */
