@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>AutoElite</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -1221,7 +1222,7 @@ async function compartirAcceso(id){
     await sbPatch('unidades','id=eq.'+encodeURIComponent(u.id),{portal_token:token});
   }catch(e){toast('Error','No se pudo generar el enlace','u');return;}
   u.token=token;c.token=token;localStorage.setItem('ae_clientes',JSON.stringify(CLIENTES));
-  var url=window.location.origin+window.location.pathname+'?acceso='+encodeURIComponent(token);
+  var url=window.location.origin+window.location.pathname+'?v=20260810-2&acceso='+encodeURIComponent(token);
   shareData={url:url,clientNom:c.nom,patente:u.pat,email:c.email||''};
   document.getElementById('shareUrl').textContent=url;
   document.getElementById('modal-unidad').style.display='none';

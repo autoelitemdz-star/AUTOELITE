@@ -4,12 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AutoElite</title>
-  <meta http-equiv="refresh" content="0; url=autoelite.html">
+  <meta http-equiv="refresh" content="0; url=autoelite.html?v=20260810-2">
   <script>
-    window.location.replace('autoelite.html' + window.location.search + window.location.hash);
+    var params = new URLSearchParams(window.location.search);
+    params.set('v', '20260810-2');
+    window.location.replace('autoelite.html?' + params.toString() + window.location.hash);
   </script>
 </head>
 <body>
-  <p>Abriendo <a href="autoelite.html">AutoElite</a>...</p>
+  <p>Abriendo <a href="autoelite.html?v=20260810-2">AutoElite</a>...</p>
 </body>
 </html>
