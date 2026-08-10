@@ -376,8 +376,8 @@ tr:hover td{background:#f5f5f0;cursor:pointer}
             <th>Nombre</th>
             <th>Email</th>
             <th>Teléfono</th>
-            <th>Empresa</th>
-            <th>Unidades</th>
+            <th>Unidad</th>
+            <th>Estado del acceso</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -399,7 +399,7 @@ tr:hover td{background:#f5f5f0;cursor:pointer}
 
 <!-- MODAL -->
 <div class="overlay" id="overlay" style="display:none" onclick="if(event.target===this)cerrarM()">
-  <div class="modal">
+  <div class="modal" id="modal-unidad">
     <h2 id="mtitle">Nueva unidad</h2>
     <div class="r2">
       <div class="field"><label>Patente / Dominio</label><input id="fp" placeholder="AB123CD" style="text-transform:uppercase"></div>
@@ -469,17 +469,10 @@ tr:hover td{background:#f5f5f0;cursor:pointer}
   <div class="modal" id="modal-cliente" style="display:none">
     <h2 id="mc-title">Nuevo Cliente</h2>
     <div class="field"><label>Nombre</label><input id="mcNom" placeholder="Nombre completo del cliente"></div>
-    <div class="field"><label>Email (será su usuario de acceso)</label><input id="mcEmail" placeholder="email@example.com" type="email"></div>
+    <div class="field"><label>Email (opcional)</label><input id="mcEmail" placeholder="email@example.com" type="email"></div>
     <div class="field"><label>Teléfono</label><input id="mcTel" placeholder="+54 9 261..."></div>
-    <div class="field"><label>Empresa asignada</label>
-      <select id="mcEmp">
-        <option value="">— Sin empresa —</option>
-        <option value="olca">OLCA</option>
-        <option value="mediterraneo">Mediterráneo</option>
-        <option value="mediterraneorp">Mediterráneo R.P.</option>
-        <option value="particular">Particular</option>
-        <option value="fedepat">Fedepat</option>
-      </select>
+    <div class="field"><label>Unidad que podrá consultar</label>
+      <select id="mcUnidad"></select>
     </div>
     <div id="mcErr"></div>
     <div class="modal-acts">
@@ -488,21 +481,15 @@ tr:hover td{background:#f5f5f0;cursor:pointer}
     </div>
   </div>
 
-  <!-- MODAL COMPARTIR CREDENCIALES -->
+  <!-- MODAL COMPARTIR ACCESO -->
   <div class="modal" id="modal-share" style="display:none">
-    <h2>📧 Compartir Credenciales con Cliente</h2>
+    <h2>🔗 Compartir acceso temporal</h2>
     <div class="share-box">
-      <div style="font-size:12px;margin-bottom:10px;color:#1a1a18"><strong>Datos de acceso para el cliente:</strong></div>
-      <div class="share-cred">
-        <strong>Usuario:</strong> <span id="shareUser"></span>
-      </div>
-      <div class="share-cred">
-        <strong>Contraseña:</strong> <span id="sharePass"></span>
-      </div>
+      <div style="font-size:12px;margin-bottom:10px;color:#1a1a18"><strong>El cliente entra directamente, sin usuario ni contraseña:</strong></div>
       <div class="share-cred">
         <strong>URL:</strong> <span id="shareUrl"></span>
       </div>
-      <button class="share-btn" onclick="copiarAlPortapapeles()">📋 Copiar Credenciales</button>
+      <button class="share-btn" onclick="copiarAlPortapapeles()">📋 Copiar enlace</button>
       <button class="share-btn" onclick="compartirWhatsApp()" style="background:#25D366;margin-top:4px">📱 Compartir por WhatsApp</button>
       <button class="share-btn" onclick="compartirEmail()" style="background:#0066CC;margin-top:4px">📧 Compartir por Email</button>
     </div>
@@ -563,7 +550,7 @@ var portalDB=[];
 var CLIENTES=[],editClientId=null;
 var NOTIFS=[],unreadNotifs=0;
 var chatMessages=[],chatOpen=false;
-var shareData={user:'',pass:'',url:''};
+var shareData={url:'',clientNom:'',patente:''};
 var darkMode=false;
 
 /* INIT */
@@ -573,6 +560,8 @@ var darkMode=false;
   try{NOTIFS=JSON.parse(localStorage.getItem('ae_notifs')||'[]');}catch(e){}
   try{darkMode=JSON.parse(localStorage.getItem('ae_darkMode')||'false');}catch(e){}
   if(darkMode)document.documentElement.style.filter='invert(1) hue-rotate(180deg)';
+  var acceso=new URLSearchParams(window.location.search).get('acceso');
+  if(acceso)ses={nom:'Cliente',token:acceso,clienteTemporal:true};
   if(ses&&ses.admin) showAdmin();
   else if(ses) showPortal();
   else showLogin();
@@ -593,7 +582,7 @@ function doLogin(){
   localStorage.setItem('ae_ses',JSON.stringify(ses));
   if(ses.admin) showAdmin(); else showPortal();
 }
-function doLogout(){ses=null;localStorage.removeItem('ae_ses');showLogin();document.getElementById('lu').value='';document.getElementById('lp').value='';}
+function doLogout(){ses=null;localStorage.removeItem('ae_ses');if(window.location.search)history.replaceState(null,'',window.location.pathname);showLogin();document.getElementById('lu').value='';document.getElementById('lp').value='';}
 
 /* SUPABASE */
 function sbH(){return{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=representation'};}
@@ -604,8 +593,8 @@ async function sbDel(t,m){var r=await fetch(SU+'/rest/v1/'+t+'?'+m,{method:'DELE
 async function sbUp(path,file){var r=await fetch(SU+'/storage/v1/object/'+BK+'/'+path,{method:'POST',headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':file.type,'x-upsert':'true'},body:file});if(!r.ok)throw new Error(await r.text());return SU+'/storage/v1/object/public/'+BK+'/'+path;}
 async function sbDelF(path){await fetch(SU+'/storage/v1/object/'+BK+'/'+path,{method:'DELETE',headers:{'apikey':SK,'Authorization':'Bearer '+SK}});}
 
-function db2l(r){return{id:r.id,pat:r.patente,emp:r.empresa,oi:r.oi,monto:r.monto,pri:r.prioridad,est:r.estado,turno:r.fecha_turno||null,cli:r.cliente,tel:r.tel,obs:r.obs,plan:r.plan_proceso||{},docs:r.docs||{},cre:r.creado,act:r.actualizado};}
-function l2db(u){return{id:u.id,patente:u.pat,empresa:u.emp,oi:u.oi,monto:u.monto||null,prioridad:u.pri,estado:u.est,fecha_turno:u.turno||null,cliente:u.cli,tel:u.tel,obs:u.obs,plan_proceso:u.plan||{},docs:u.docs||{},creado:u.cre,actualizado:u.act};}
+function db2l(r){return{id:r.id,pat:r.patente,emp:r.empresa,oi:r.oi,monto:r.monto,pri:r.prioridad,est:r.estado,turno:r.fecha_turno||null,cli:r.cliente,tel:r.tel,obs:r.obs,plan:r.plan_proceso||{},docs:r.docs||{},token:r.portal_token||null,cre:r.creado,act:r.actualizado};}
+function l2db(u){return{id:u.id,patente:u.pat,empresa:u.emp,oi:u.oi,monto:u.monto||null,prioridad:u.pri,estado:u.est,fecha_turno:u.turno||null,cliente:u.cli,tel:u.tel,obs:u.obs,plan_proceso:u.plan||{},docs:u.docs||{},portal_token:u.token||null,creado:u.cre,actualizado:u.act};}
 
 /* AUDIO */
 function getAC(){if(!aCtx)aCtx=new(window.AudioContext||window.webkitAudioContext)();return aCtx;}
@@ -644,7 +633,8 @@ async function loadPortal(){
   document.getElementById('pcards').innerHTML='<div class="pempty">Cargando...</div>';
   try{
     var q='order=creado.desc&limit=500';
-    if(ses.emp) q+='&empresa=eq.'+ses.emp;
+    if(ses.token) q+='&portal_token=eq.'+encodeURIComponent(ses.token);
+    else if(ses.emp) q+='&empresa=eq.'+ses.emp;
     var rows=await sbGet('unidades',q);
     portalDB=rows.map(db2l);
     if(portalDB.length){
@@ -654,6 +644,7 @@ async function loadPortal(){
         portalDB.forEach(function(u){u.reps=reps.filter(function(r){return r.unidad_id===u.id;});});
       }catch(e){portalDB.forEach(function(u){u.reps=[];});}
     }
+    if(ses.clienteTemporal&&portalDB.length)document.getElementById('puser').textContent=portalDB[0].cli||'Cliente';
     renderPortal();
   }catch(e){document.getElementById('pcards').innerHTML='<div class="pempty">Error al cargar. Verificá tu conexión.</div>';}
 }
@@ -1014,6 +1005,9 @@ function resetDZ(){
 
 function abrirM(id){
   editId=id||null;pendReps=[];
+  document.getElementById('modal-unidad').style.display='block';
+  document.getElementById('modal-cliente').style.display='none';
+  document.getElementById('modal-share').style.display='none';
   var u=id?DB.find(function(x){return x.id===id;}):{};
   document.getElementById('mtitle').textContent=id?'Editar unidad':'Nueva unidad';
   document.getElementById('fp').value=u.pat||'';
@@ -1138,11 +1132,12 @@ function renderMonitor(){
 /* CLIENTES */
 function renderClientes(){
   var busca=(document.getElementById('searchClient').value||'').toLowerCase();
-  var fil=CLIENTES.filter(function(c){return !busca||c.nom.toLowerCase().includes(busca)||c.email.toLowerCase().includes(busca);});
+  var fil=CLIENTES.filter(function(c){return !busca||c.nom.toLowerCase().includes(busca)||(c.email||'').toLowerCase().includes(busca);});
   var html='';
   fil.forEach(function(c){
-    var unidades=DB.filter(function(u){return u.cli===c.nom;}).length;
-    html+='<tr onclick="editarCliente(\''+c.id+'\')"><td>'+c.nom+'</td><td>'+c.email+'</td><td>'+(c.tel||'-')+'</td><td>'+(c.emp||'-')+'</td><td><span class="cbadge">'+unidades+'</span></td><td style="text-align:center"><button class="btn btn-sm btn-p" onclick="event.stopPropagation();compartirCredenciales(\''+c.id+'\')">Compartir</button> <button class="btn btn-sm btn-d" onclick="event.stopPropagation();eliminarCliente(\''+c.id+'\')">Eliminar</button></td></tr>';
+    var unidad=DB.find(function(u){return u.id===c.unidadId;});
+    var acceso=unidad&&unidad.token?'Activo':'Sin generar';
+    html+='<tr onclick="editarCliente(\''+c.id+'\')"><td>'+esc(c.nom)+'</td><td>'+esc(c.email||'-')+'</td><td>'+esc(c.tel||'-')+'</td><td>'+(unidad?esc(unidad.pat):'-')+'</td><td><span class="cbadge">'+acceso+'</span></td><td style="text-align:center"><button class="btn btn-sm btn-p" onclick="event.stopPropagation();compartirAcceso(\''+c.id+'\')">Generar enlace</button> <button class="btn btn-sm btn-d" onclick="event.stopPropagation();eliminarCliente(\''+c.id+'\')">Eliminar</button></td></tr>';
   });
   document.getElementById('clientList').innerHTML=html||'<tr><td colspan="6" style="text-align:center;padding:2rem">Sin clientes registrados</td></tr>';
 }
@@ -1153,9 +1148,12 @@ function abrirNewClient(){
   document.getElementById('mcNom').value='';
   document.getElementById('mcEmail').value='';
   document.getElementById('mcTel').value='';
-  document.getElementById('mcEmp').value='';
+  cargarUnidadesCliente('');
   document.getElementById('mcErr').innerHTML='';
+  document.getElementById('modal-unidad').style.display='none';
+  document.getElementById('modal-share').style.display='none';
   document.getElementById('modal-cliente').style.display='block';
+  document.getElementById('overlay').style.display='flex';
   document.getElementById('mcNom').focus();
 }
 
@@ -1167,18 +1165,28 @@ function editarCliente(id){
   document.getElementById('mcNom').value=c.nom||'';
   document.getElementById('mcEmail').value=c.email||'';
   document.getElementById('mcTel').value=c.tel||'';
-  document.getElementById('mcEmp').value=c.emp||'';
+  cargarUnidadesCliente(c.unidadId||'');
   document.getElementById('mcErr').innerHTML='';
+  document.getElementById('modal-unidad').style.display='none';
+  document.getElementById('modal-share').style.display='none';
   document.getElementById('modal-cliente').style.display='block';
+  document.getElementById('overlay').style.display='flex';
+}
+
+function cargarUnidadesCliente(valor){
+  var el=document.getElementById('mcUnidad');
+  el.innerHTML='<option value="">— Elegir unidad —</option>'+DB.map(function(u){return '<option value="'+u.id+'">'+esc(u.pat)+' — '+esc(u.cli||'Sin cliente')+'</option>';}).join('');
+  el.value=valor||'';
 }
 
 function guardarCliente(){
   var nom=document.getElementById('mcNom').value.trim();
   var email=document.getElementById('mcEmail').value.trim();
   var tel=document.getElementById('mcTel').value.trim();
-  var emp=document.getElementById('mcEmp').value.trim();
-  if(!nom||!email){document.getElementById('mcErr').innerHTML='<div class="ebox">Nombre y email son obligatorios</div>';return;}
-  var c={id:editClientId||'cli_'+Date.now(),nom:nom,email:email,tel:tel,emp:emp};
+  var unidadId=document.getElementById('mcUnidad').value;
+  if(!nom||!unidadId){document.getElementById('mcErr').innerHTML='<div class="ebox">Nombre y unidad son obligatorios</div>';return;}
+  var anterior=CLIENTES.find(function(x){return x.id===editClientId;})||{};
+  var c={id:editClientId||'cli_'+Date.now(),nom:nom,email:email,tel:tel,unidadId:unidadId,token:anterior.token||null};
   if(editClientId){
     var idx=CLIENTES.findIndex(function(x){return x.id===editClientId;});
     if(idx>=0)CLIENTES[idx]=c;
@@ -1200,51 +1208,47 @@ function eliminarCliente(id){
   renderClientes();
 }
 
-function cerrarModalCliente(){document.getElementById('modal-cliente').style.display='none';}
+function cerrarModalCliente(){document.getElementById('modal-cliente').style.display='none';document.getElementById('overlay').style.display='none';}
 
-function compartirCredenciales(id){
+async function compartirAcceso(id){
   var c=CLIENTES.find(function(x){return x.id===id;});
   if(!c)return;
-  /* Generamos un username limpio a partir del email */
-  var user=(c.email||'').toLowerCase().trim().split('@')[0].replace(/[^a-z0-9]/g,'');
-  if(!user){toast('Error','El cliente debe tener email para generar usuario','u');return;}
-  /* Si ya existe una contraseña guardada para este cliente, la reutilizamos; sino generamos una nueva */
-  var extra={};
-  try{extra=JSON.parse(localStorage.getItem('ae_extra_users')||'{}');}catch(e){}
-  var pass;
-  if(extra[user]&&extra[user].pass){pass=extra[user].pass;}
-  else{pass='Auto'+Math.random().toString(36).substr(2,8);}
-  /* Guardamos el usuario en USERS (en memoria) y en localStorage (persistente) */
-  var nuevoUser={pass:pass,emp:c.emp||null,nom:c.nom,cliente:true};
-  USERS[user]=nuevoUser;
-  extra[user]=nuevoUser;
-  localStorage.setItem('ae_extra_users',JSON.stringify(extra));
-  var url=window.location.href.split('?')[0];
-  shareData={user:user,pass:pass,url:url,clientNom:c.nom};
-  document.getElementById('shareUser').textContent=user;
-  document.getElementById('sharePass').textContent=pass;
+  var u=DB.find(function(x){return x.id===c.unidadId;});
+  if(!u){toast('Error','La unidad asignada ya no existe','u');return;}
+  var token=u.token||c.token;
+  if(!token){var bytes=new Uint8Array(18);crypto.getRandomValues(bytes);token=Array.from(bytes).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
+  try{
+    await sbPatch('unidades','id=eq.'+encodeURIComponent(u.id),{portal_token:token});
+  }catch(e){toast('Error','No se pudo generar el enlace','u');return;}
+  u.token=token;c.token=token;localStorage.setItem('ae_clientes',JSON.stringify(CLIENTES));
+  var url=window.location.origin+window.location.pathname+'?acceso='+encodeURIComponent(token);
+  shareData={url:url,clientNom:c.nom,patente:u.pat,email:c.email||''};
   document.getElementById('shareUrl').textContent=url;
+  document.getElementById('modal-unidad').style.display='none';
+  document.getElementById('modal-cliente').style.display='none';
   document.getElementById('modal-share').style.display='block';
-  agregarNotificacion('🆕 Acceso creado','Usuario de portal listo para '+c.nom,'ok');
-  toast('✅ Usuario creado','Puede ingresar con: '+user,'ok');
+  document.getElementById('overlay').style.display='flex';
+  agregarNotificacion('🔗 Acceso creado','Enlace temporal listo para '+c.nom,'ok');
+  toast('✅ Enlace creado','El cliente entra sin contraseña','ok');
+  renderClientes();
 }
 
-function cerrarModalShare(){document.getElementById('modal-share').style.display='none';}
+function cerrarModalShare(){document.getElementById('modal-share').style.display='none';document.getElementById('overlay').style.display='none';}
 
 function copiarAlPortapapeles(){
-  var texto='👤 '+shareData.clientNom+'\n📧 Usuario: '+shareData.user+'\n🔑 Contraseña: '+shareData.pass+'\n🌐 URL: '+shareData.url;
-  navigator.clipboard.writeText(texto).then(function(){toast('✅ Copiado','Credenciales copiadas al portapapeles','ok');});
+  var texto='Hola '+shareData.clientNom+', podés seguir el estado de tu vehículo '+shareData.patente+' desde este enlace:\n'+shareData.url;
+  navigator.clipboard.writeText(texto).then(function(){toast('✅ Copiado','Enlace copiado al portapapeles','ok');});
 }
 
 function compartirWhatsApp(){
-  var texto='Hola '+shareData.clientNom+',%0A%0a👤 Usuario: '+shareData.user+'%0A🔑 Contraseña: '+shareData.pass+'%0A🌐 Accede aquí: '+shareData.url;
+  var texto='Hola '+shareData.clientNom+', podés seguir el estado de tu vehículo '+shareData.patente+' desde este enlace:%0A'+encodeURIComponent(shareData.url);
   window.open('https://wa.me/?text='+texto,'_blank');
 }
 
 function compartirEmail(){
-  var asunto='Credenciales de acceso - AutoElite';
-  var body='Hola '+shareData.clientNom+',%0A%0aA continuación encontrarás tus datos de acceso:%0A%0aUsuario: '+shareData.user+'%0AContraseña: '+shareData.pass+'%0AURL: '+shareData.url+'%0A%0aSaludos!';
-  window.open('mailto:'+shareData.user+'?subject='+asunto+'&body='+body);
+  var asunto='Seguimiento de tu vehículo - AutoElite';
+  var body='Hola '+shareData.clientNom+',%0A%0aPodés seguir el estado de tu vehículo '+shareData.patente+' sin contraseña desde este enlace:%0A'+encodeURIComponent(shareData.url)+'%0A%0aSaludos!';
+  window.open('mailto:'+shareData.email+'?subject='+encodeURIComponent(asunto)+'&body='+body);
 }
 
 /* NOTIFICACIONES */
