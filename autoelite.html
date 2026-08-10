@@ -181,6 +181,7 @@ tr:hover td{background:#f5f5f0;cursor:pointer}
 .ptllab{font-size:13px}
 .ptlfec{font-size:11px;color:#aaa;margin-top:1px}
 .pdocs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #f0efe8}
+.pdocs-title{width:100%;font-size:12px;font-weight:600;color:#666;margin-bottom:2px}
 .pdbtn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid #d0cfc8;border-radius:8px;font-size:12px;color:#1a1a18;text-decoration:none;background:#f5f5f0}
 .pdbtn:hover{background:#e0dfd8}
 .pobs{margin-top:10px;padding:8px 10px;background:#f5f5f0;border-radius:8px;font-size:12px;color:#666}
@@ -678,7 +679,7 @@ function renderPortal(){
       return '<div class="ptlr"><div class="ptll"><div class="ptld" style="background:'+(act||done?'#185FA5':'#e0dfd8')+';border:'+(act?'3px solid #B5D4F4':'none')+'"></div>'+(!last?'<div class="ptlln" style="background:'+(done?'#185FA5':'#e0dfd8')+'"></div>':'')+
       '</div><div><div class="ptllab" style="font-weight:'+(act?600:400)+';color:'+(act?'#185FA5':done?'#1a1a18':'#aaa')+'">'+p.i+' '+p.l+'</div>'+(fecha?'<div class="ptlfec">'+fecha+'</div>':'')+'</div></div>';
     }).join('');
-    var docs=u.docs||{},dbts=Object.keys(docs).map(function(t){var d=docs[t];return '<a href="'+d.url+'" target="_blank" class="pdbtn">'+(d.tipo==='application/pdf'?'📄':'🖼')+' '+(t==='p'||t==='presupuesto'?'Presupuesto':'Orden de ingreso')+' — Descargar</a>';}).join('');
+    var docs=u.docs||{},dbts=Object.keys(docs).map(function(t){var d=docs[t];return '<a href="'+d.url+'" target="_blank" rel="noopener" class="pdbtn">'+(d.tipo==='application/pdf'?'📄':'🖼')+' Abrir '+(t==='p'||t==='presupuesto'?'presupuesto':'orden de reparación')+'</a>';}).join('');
     var reps=u.reps||[];
     var hayNov=reps.some(function(r){return r.estado==='Pedido'||r.estado==='En camino';});
     var repsHTML=reps.length?'<div class="preps">'+
@@ -713,7 +714,7 @@ function renderPortal(){
       '</div><div style="display:flex;gap:6px;align-items:flex-start"><span class="pest" style="background:'+pr.b+';color:'+pr.c+'">'+pr.i+' '+pr.l+'</span>'+(u.pri?'<span style="padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;background:'+(u.pri==='Alta'?'#FCEBEB;color:#A32D2D':u.pri==='Media'?'#FAEEDA;color:#854F0B':'#EAF3DE;color:#3B6D11')+'">🎯 '+u.pri.toUpperCase()+'</span>':'')+' </div></div>'+
       '<div class="pprog"><div class="pprogf" style="width:'+prog+'%;background:'+pr.c+'"></div></div>'+
       '<div class="ptl">'+tl+'</div>'+
-      (dbts?'<div class="pdocs">'+dbts+'</div>':'')+
+      (dbts?'<div class="pdocs"><div class="pdocs-title">📁 Documentos de la unidad</div>'+dbts+'</div>':'')+
       repsHTML+
       (u.obs?'<div class="pobs">📝 '+esc(u.obs)+'</div>':'')+
       '<div class="pmeta">'+(u.oi?'OI #'+u.oi+'  ':'')+
@@ -1222,7 +1223,7 @@ async function compartirAcceso(id){
     await sbPatch('unidades','id=eq.'+encodeURIComponent(u.id),{portal_token:token});
   }catch(e){toast('Error','No se pudo generar el enlace','u');return;}
   u.token=token;c.token=token;localStorage.setItem('ae_clientes',JSON.stringify(CLIENTES));
-  var url='https://autoelitemdz-star.github.io/AUTOELITE/autoelite.html?v=20260810-3&acceso='+encodeURIComponent(token);
+  var url='https://autoelitemdz-star.github.io/AUTOELITE/autoelite.html?v=20260810-4&acceso='+encodeURIComponent(token);
   shareData={url:url,clientNom:c.nom,patente:u.pat,email:c.email||''};
   document.getElementById('shareUrl').textContent=url;
   document.getElementById('shareUrl').href=url;
