@@ -1044,7 +1044,8 @@ async function guardar(){
     var tid=editId||getId();
     var dAct=editId?(DB.find(function(x){return x.id===editId;})||{}).docs||{}:{};
     var docs=await subirDocs(tid,dAct);
-    var obj={id:tid,pat:pat,emp:document.getElementById('fe').value,oi:document.getElementById('foi').value.trim(),monto:document.getElementById('fm').value,pri:document.getElementById('fpr').value,est:document.getElementById('fest').value,turno:document.getElementById('ftur').value||null,cli:document.getElementById('fcli').value.trim(),tel:document.getElementById('ftel').value.trim(),obs:document.getElementById('fobs').value.trim(),plan:plan,docs:docs,cre:editId?(DB.find(function(x){return x.id===editId;})||{}).cre:hoy(),act:hoy()};
+    var unidadActual=editId?(DB.find(function(x){return x.id===editId;})||{}):{};
+    var obj={id:tid,pat:pat,emp:document.getElementById('fe').value,oi:document.getElementById('foi').value.trim(),monto:document.getElementById('fm').value,pri:document.getElementById('fpr').value,est:document.getElementById('fest').value,turno:document.getElementById('ftur').value||null,cli:document.getElementById('fcli').value.trim(),tel:document.getElementById('ftel').value.trim(),obs:document.getElementById('fobs').value.trim(),plan:plan,docs:docs,token:unidadActual.token||null,cre:editId?unidadActual.cre:hoy(),act:hoy()};
     if(editId){await sbPatch('unidades','id=eq.'+tid,l2db(obj));var idx=DB.findIndex(function(x){return x.id===editId;});DB[idx]=obj;}
     else{await sbPost('unidades',l2db(obj));DB.unshift(obj);}
     /* save pending repuestos */
@@ -1223,7 +1224,7 @@ async function compartirAcceso(id){
     await sbPatch('unidades','id=eq.'+encodeURIComponent(u.id),{portal_token:token});
   }catch(e){toast('Error','No se pudo generar el enlace','u');return;}
   u.token=token;c.token=token;localStorage.setItem('ae_clientes',JSON.stringify(CLIENTES));
-  var url='https://autoelitemdz-star.github.io/AUTOELITE/autoelite.html?v=20260810-4&acceso='+encodeURIComponent(token);
+  var url='https://autoelitemdz-star.github.io/AUTOELITE/autoelite.html?v=20260810-5&acceso='+encodeURIComponent(token);
   shareData={url:url,clientNom:c.nom,patente:u.pat,email:c.email||''};
   document.getElementById('shareUrl').textContent=url;
   document.getElementById('shareUrl').href=url;
