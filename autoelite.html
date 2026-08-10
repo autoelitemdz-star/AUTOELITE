@@ -1222,7 +1222,7 @@ async function compartirAcceso(id){
     await sbPatch('unidades','id=eq.'+encodeURIComponent(u.id),{portal_token:token});
   }catch(e){toast('Error','No se pudo generar el enlace','u');return;}
   u.token=token;c.token=token;localStorage.setItem('ae_clientes',JSON.stringify(CLIENTES));
-  var url=window.location.origin+window.location.pathname+'?v=20260810-3&acceso='+encodeURIComponent(token);
+  var url='https://autoelitemdz-star.github.io/AUTOELITE/autoelite.html?v=20260810-3&acceso='+encodeURIComponent(token);
   shareData={url:url,clientNom:c.nom,patente:u.pat,email:c.email||''};
   document.getElementById('shareUrl').textContent=url;
   document.getElementById('shareUrl').href=url;
